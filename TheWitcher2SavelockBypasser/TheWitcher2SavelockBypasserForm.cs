@@ -14,28 +14,29 @@ namespace TheWitcher2SavelockBypasser
         private byte[] bytes;
         private bool isUnlocked = false;
 
-        private delegate void noParamDelegate();
-        private noParamDelegate refreshLabelDelegate;
+        private delegate void refreshDelegate();
+        private refreshDelegate refreshLabelDelegate;
 
         public TheWitcher2SavelockBypasserForm()
         {
             InitializeComponent();
             RegisterEvents();
 
-            refreshLabelDelegate = new noParamDelegate(refreshLabel);
             key = Registry.CurrentUser.OpenSubKey(@"Software\CD Projekt RED\The Witcher 2", true);
+            refreshLabelDelegate = new refreshDelegate(refreshLabel);
+            queryRegistry();
         }
 
         private void TheWitcher2SavelockBypasserForm_Shown(object sender, EventArgs e)
         {
-            queryRegistry();
             refreshLabel();
         }
 
         private void TheWitcher2SavelockBypasserForm_FormClosed(object sender, FormClosedEventArgs e)
         {
+            key.Dispose();
+
             // Stop listening for events
-            regMonitor.Stop();
             regMonitor.Dispose();
         }
 
@@ -78,7 +79,7 @@ namespace TheWitcher2SavelockBypasser
             {
                 // Update label
                 labelLocked.ForeColor = isUnlocked ? Color.Green : Color.Red;
-                labelLocked.Text = isUnlocked ? "UNLOCKED" : "LOCKED";
+                labelLocked.Text      = isUnlocked ? "UNLOCKED" : "LOCKED";
             }
         }
 
