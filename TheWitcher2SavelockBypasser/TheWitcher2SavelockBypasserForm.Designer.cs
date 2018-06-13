@@ -69,6 +69,7 @@
             this.Controls.Add(this.labelLocked);
             this.Controls.Add(this.buttonUnlock);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
             this.Name = "TheWitcher2SavelockBypasserForm";
             this.Text = "The Witcher 2 Savelock Bypasser v1.0";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.TheWitcher2SavelockBypasserForm_FormClosed);
