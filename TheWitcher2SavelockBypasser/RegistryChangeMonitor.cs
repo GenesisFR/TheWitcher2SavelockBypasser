@@ -91,9 +91,6 @@ namespace TheWitcher2SavelockBypasser
         {
             lock (this)
             {
-                this.Changed = null;
-                this.Error = null;
-
                 if (this._monitorThread != null)
                 {
                     this._monitorThread = null;
