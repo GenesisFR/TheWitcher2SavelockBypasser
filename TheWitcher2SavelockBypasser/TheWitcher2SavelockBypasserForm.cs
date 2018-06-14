@@ -12,7 +12,7 @@ namespace TheWitcher2SavelockBypasser
         private RegistryKey key;
         private object value;
         private byte[] bytes;
-        private bool isUnlocked = false;
+        private bool isUnlocked;
 
         private delegate void refreshDelegate();
         private refreshDelegate refreshLabelDelegate;
@@ -22,12 +22,11 @@ namespace TheWitcher2SavelockBypasser
             InitializeComponent();
             RegisterEvents();
 
-            key = Registry.CurrentUser.OpenSubKey(@"Software\CD Projekt RED\The Witcher 2", true);
             refreshLabelDelegate = new refreshDelegate(refreshLabel);
             queryRegistry();
         }
 
-        private void TheWitcher2SavelockBypasserForm_Shown(object sender, EventArgs e)
+        private void TheWitcher2SavelockBypasserForm_Load(object sender, EventArgs e)
         {
             refreshLabel();
         }
@@ -56,18 +55,34 @@ namespace TheWitcher2SavelockBypasser
 
         private void queryRegistry()
         {
-            if (key != null)
+            isUnlocked = false;
+
+            try
             {
-                value = key.GetValue("GameData");
+                // Get key
+                key = Registry.CurrentUser.OpenSubKey(@"Software\CD Projekt RED\The Witcher 2", true);
 
-                if (value != null)
+                if (key != null)
                 {
-                    // Get value
-                    bytes = (byte[])key.GetValue("GameData");
+                    // Get value data
+                    value = key.GetValue("GameData");
 
-                    if (bytes.Length > 8)
-                        isUnlocked = bytes[8] == 53;
+                    if (value != null)
+                    {
+                        // Convert data to bytes
+                        bytes = (byte[])value;
+
+                        // When starting a new insane playthrough, the game will set the 9th byte to 53, which means the save is unlocked
+                        // As soon as you die, this byte will change to 52 and the save will be locked
+                        // It's also locked if the 9th byte is anything other than 53 or if the GameData registry key doesn't exist
+                        if (bytes.Length > 8)
+                            isUnlocked = bytes[8] == 53;
+                    }
                 }
+            }
+            catch
+            {
+
             }
         }
 
@@ -110,7 +125,7 @@ namespace TheWitcher2SavelockBypasser
                     isKeyFound ? MessageBoxIcon.Information : MessageBoxIcon.Error) == DialogResult.Yes)
                     Process.Start("steam://run/20920");
             }
-            catch (Exception)
+            catch
             {
                 MessageBox.Show(@"Error while editing the registry.\nMake sure you have required permissions to edit the registry.",
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);

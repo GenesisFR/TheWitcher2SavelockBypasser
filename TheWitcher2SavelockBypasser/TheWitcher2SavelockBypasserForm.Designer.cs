@@ -31,8 +31,6 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TheWitcher2SavelockBypasserForm));
             this.buttonUnlock = new System.Windows.Forms.Button();
             this.labelLocked = new System.Windows.Forms.Label();
-            this.fileSystemWatcher1 = new System.IO.FileSystemWatcher();
-            ((System.ComponentModel.ISupportInitialize)(this.fileSystemWatcher1)).BeginInit();
             this.SuspendLayout();
             // 
             // buttonUnlock
@@ -56,11 +54,6 @@
             this.labelLocked.Text = "LOCKED";
             this.labelLocked.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
-            // fileSystemWatcher1
-            // 
-            this.fileSystemWatcher1.EnableRaisingEvents = true;
-            this.fileSystemWatcher1.SynchronizingObject = this;
-            // 
             // TheWitcher2SavelockBypasserForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -73,8 +66,7 @@
             this.Name = "TheWitcher2SavelockBypasserForm";
             this.Text = "The Witcher 2 Savelock Bypasser v1.0";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.TheWitcher2SavelockBypasserForm_FormClosed);
-            this.Shown += new System.EventHandler(this.TheWitcher2SavelockBypasserForm_Shown);
-            ((System.ComponentModel.ISupportInitialize)(this.fileSystemWatcher1)).EndInit();
+            this.Load += new System.EventHandler(this.TheWitcher2SavelockBypasserForm_Load);
             this.ResumeLayout(false);
 
         }
@@ -83,7 +75,6 @@
 
         private System.Windows.Forms.Button buttonUnlock;
         private System.Windows.Forms.Label labelLocked;
-        private System.IO.FileSystemWatcher fileSystemWatcher1;
     }
 }
 
