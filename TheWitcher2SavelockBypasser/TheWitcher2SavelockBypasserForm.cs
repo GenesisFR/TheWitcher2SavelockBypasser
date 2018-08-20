@@ -1,39 +1,53 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace TheWitcher2SavelockBypasser
 {
-    // TODO: add support for Epilogue
     public partial class TheWitcher2SavelockBypasserForm : Form
     {
         private RegistryChangeMonitor regMonitor; // tracks changes made to the registry key below
-        private const string keyName = @"HKEY_CURRENT_USER\Software\CD Projekt RED\The Witcher 2";
-        private const string formattedKeyName = @"HKCU\Software\CD Projekt RED\The Witcher 2\GameData";
+        private const string KEY_NAME = @"HKEY_CURRENT_USER\Software\CD Projekt RED\The Witcher 2";
+        private const string VALUE_NAME = @"GameData";
+        private const string FORMATTED_KEY_NAME = @"HKCU\Software\CD Projekt RED\The Witcher 2\GameData";
         private object value;
         private byte[] bytes;
-        private bool isInPrologue;
-        private bool isInChapters;
-        private bool isInEpilogue;
+        private bool hasOnePlaythrough;
+        private bool hasTwoPlaythroughs;
+        private bool hasThreePlaythroughs;
+        private bool hasFourPlaythroughs;
+        private bool hasFiveOrMorePlaythroughs;
         private bool isUnlocked;
 
         private delegate void refreshDelegate();
-        private refreshDelegate refreshLabelDelegate;
+        private refreshDelegate refreshUIDelegate;
 
         public TheWitcher2SavelockBypasserForm()
         {
             InitializeComponent();
             StartMonitoringRegistry();
 
-            refreshLabelDelegate = new refreshDelegate(refreshLabel);
-            queryRegistry();
+            refreshUIDelegate = new refreshDelegate(RefreshUI);
+            QueryRegistry();
         }
 
         private void TheWitcher2SavelockBypasserForm_Load(object sender, EventArgs e)
         {
-            refreshLabel();
+            RefreshUI();
+            fileSystemWatcher.Path = Directory.GetCurrentDirectory();
+            buttonRestore.Enabled = File.Exists("backup.reg");
+
+            if (value == null)
+            {
+                string msg = string.Format("{0}\n\n{1}\n\n{2}", "The following registry entry doesn't exist:", FORMATTED_KEY_NAME,
+                    "Make sure you started a new insane playthrough.");
+
+                MessageBox.Show(msg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void TheWitcher2SavelockBypasserForm_FormClosed(object sender, FormClosedEventArgs e)
@@ -43,7 +57,7 @@ namespace TheWitcher2SavelockBypasser
 
         private void StartMonitoringRegistry()
         {
-            regMonitor = new RegistryChangeMonitor(keyName, RegistryChangeMonitor.REG_NOTIFY_CHANGE.LAST_SET);
+            regMonitor = new RegistryChangeMonitor(KEY_NAME, RegistryChangeMonitor.REG_NOTIFY_CHANGE.LAST_SET);
             regMonitor.Changed += OnRegistryChanged;
 
             // Start listening for events
@@ -58,45 +72,58 @@ namespace TheWitcher2SavelockBypasser
 
         private void OnRegistryChanged(object sender, RegistryChangeEventArgs e)
         {
-            queryRegistry();
-            refreshLabel();
+            QueryRegistry();
+            RefreshUI();
         }
 
-        private void queryRegistry()
+        private void QueryRegistry()
         {
-            isUnlocked   = false;
-            isInPrologue = false;
-            isInChapters = false;
-            isInEpilogue = false;
+            isUnlocked = false;
+            hasOnePlaythrough = false;
+            hasTwoPlaythroughs = false;
+            hasThreePlaythroughs = false;
+            hasFourPlaythroughs = false;
+            hasFiveOrMorePlaythroughs = false;
 
             try
             {
                 // Get value data
-                value = Registry.GetValue(keyName, "GameData", null);
+                value = Registry.GetValue(KEY_NAME, VALUE_NAME, null);
 
                 if (value != null)
                 {
-                    // Convert data to bytes
+                    // When playing on insane, the game will read/write a specific entry in registry, which value is an array of bytes, so
+                    // we need to convert it.
                     bytes = (byte[])value;
 
-                    // When playing on insane, the game will set a specific byte to a specific value, based on your progression
-                    // The array of bytes will have a specific length, also based on your progression
-                    isInPrologue = bytes.Length == 25;
-                    isInChapters = bytes.Length == 30;
-                    isInEpilogue = bytes.Length == 35;
+                    // This array of bytes has a specific length, based on the number of insane playthroughs started. It starts at 25
+                    // bytes and is incremented by 5 for each new insane playthrough.
+                    hasOnePlaythrough         = bytes.Length >= 25;
+                    hasTwoPlaythroughs        = bytes.Length >= 30;
+                    hasThreePlaythroughs      = bytes.Length >= 35;
+                    hasFourPlaythroughs       = bytes.Length >= 40;
+                    hasFiveOrMorePlaythroughs = bytes.Length >= 45;
 
-                    // As soon as you die, the byte is decremented by one and the save is locked
-                    // It's also locked if the byte is anything other than what it's supposed to be or if the registry key doesn't exist
+                    // When you die, a specific byte (based on how many insane playthroughs you've started) is shifted by one, effectively
+                    // locking the save for the current playthrough. It's also locked if the byte is anything other than what it's supposed
+                    // to be or if the registry entry doesn't exist.
+                    // This byte is different depending on the number of playthroughs, that's why I'm only supporting up to 5 playthroughs.
 
-                    // Prologue: if the 9th byte is 53, the save is unlocked
-                    if (isInPrologue)
+                    // If the 9th byte is 53 (35 in hexa), the save is unlocked
+                    if (hasOnePlaythrough)
                         isUnlocked = bytes[8] == 53;
-                    // Chapters: if the 14th byte is 112, the save is unlocked
-                    else if (isInChapters)
+                    // If the 14th byte is 112 (70 in hexa), the save is unlocked
+                    if (hasTwoPlaythroughs)
                         isUnlocked = bytes[13] == 112;
-                    // Epilogue: if the ??th byte is ???, the save is unlocked
-                    else if (isInEpilogue)
-                        isUnlocked = bytes[18] == bytes[18];
+                    // If the 19th byte is 119 (77 in hexa), the save is unlocked
+                    if (hasThreePlaythroughs)
+                        isUnlocked = bytes[18] == 119;
+                    // If the 24th byte is 4, the save is unlocked
+                    if (hasFourPlaythroughs)
+                        isUnlocked = bytes[23] == 4;
+                    // If the 29th byte is 17 (11 in hexa), the save is unlocked
+                    if (hasFiveOrMorePlaythroughs)
+                        isUnlocked = bytes[28] == 17;
                 }
             }
             catch
@@ -105,53 +132,146 @@ namespace TheWitcher2SavelockBypasser
             }
         }
 
-        private void refreshLabel()
+        private void RefreshUI()
         {
             if (InvokeRequired)
-                Invoke(refreshLabelDelegate);
+                Invoke(refreshUIDelegate);
             else
             {
                 // Update label
                 labelLocked.ForeColor = isUnlocked ? Color.Green : Color.Red;
-                labelLocked.Text      = isUnlocked ? "UNLOCKED" : "LOCKED";
+                labelLocked.Text = isUnlocked ? "UNLOCKED" : "LOCKED";
+
+                buttonReset.Enabled = value != null;
+                buttonBackup.Enabled = value != null;
+                buttonUnlock.Enabled = value != null;
             }
         }
 
-        private void buttonUnlock_Click(object sender, EventArgs e)
+        private void ButtonReset_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show("Your saved game information in registry will be deleted. Without it, you won't be" +
+                " able to load any save made on insane difficulty. Would you like to back it up first?", "Warning",
+                MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+                buttonBackup.PerformClick();
+
+            if (result != DialogResult.Cancel)
+            {
+                if (LaunchProcess("reg.exe", string.Format("delete \"{0}\" /v \"{1}\" /f", KEY_NAME, VALUE_NAME)))
+                    MessageBox.Show("Reset successful.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void ButtonBackup_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Make a temporary REG file
+                if (value != null && LaunchProcess("reg.exe", string.Format("export \"{0}\" \"{1}\" /y", KEY_NAME, "backup_temp.reg")) &&
+                    File.Exists("backup_temp.reg"))
+                {
+                    // Remove unnecessary lines
+                    List<string> lines = new List<string>(File.ReadLines("backup_temp.reg"));
+                    lines.RemoveAll(item => item.Contains("Language") || item.Contains("Speech") || item.Contains("InstallStatus") ||
+                        item.Contains(@"[HKEY_CURRENT_USER\Software\CD Projekt RED\The Witcher 2\Downloads]"));
+
+                    // Create the final REG file
+                    File.WriteAllLines("backup.reg", lines);
+                    File.Delete("backup_temp.reg");
+
+                    MessageBox.Show("Backup successful.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch
+            {
+                // Nothing to do here
+            }
+        }
+
+        private void ButtonUnlock_Click(object sender, EventArgs e)
         {
             try
             {
                 // Make sure we're not changing old values
-                queryRegistry();
+                QueryRegistry();
 
                 if (value != null && bytes != null && bytes.Length > 8)
                 {
                     // Magic numbers (yer a wizard, Harry)
-                    if (isInPrologue)
+                    if (hasOnePlaythrough)
                         bytes[8] = 53;
-                    else if (isInChapters)
-                        bytes[13] = 113;
-                    else if (isInEpilogue)
-                        bytes[18] = bytes[18];
+                    if (hasTwoPlaythroughs)
+                        bytes[13] = 112;
+                    if (hasThreePlaythroughs)
+                        bytes[18] = 119;
+                    if (hasFourPlaythroughs)
+                        bytes[23] = 4;
+                    if (hasFiveOrMorePlaythroughs)
+                        bytes[28] = 17;
 
                     // Update registry
-                    Registry.SetValue(keyName, "GameData", bytes, RegistryValueKind.None);
+                    Registry.SetValue(KEY_NAME, VALUE_NAME, bytes, RegistryValueKind.None);
                 }
 
-                bool isKeyFound = value != null;
-                string msg = isKeyFound ? "Save unlocked! Do you want to run the game?" : string.Format("{0}\n\n{1}\n\n{2}",
-                "The following registry key doesn't exist:", formattedKeyName, "Do you want to start a new playthrough?");
-
-                // Offer the user to run the game
-                if (MessageBox.Show(msg, isKeyFound ? "Success" : "Error", MessageBoxButtons.YesNo,
-                    isKeyFound ? MessageBoxIcon.Information : MessageBoxIcon.Error) == DialogResult.Yes)
-                    Process.Start("steam://run/20920");
+                if (value != null)
+                    MessageBox.Show("Save unlocked successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch
             {
                 MessageBox.Show(@"Error while editing the registry.\nMake sure you have sufficient privileges.", "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+    private void ButtonRestore_Click(object sender, EventArgs e)
+    {
+        if (LaunchProcess("reg.exe", "import backup.reg"))
+            MessageBox.Show("Restoration successful.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private void ButtonPlay_Click(object sender, EventArgs e)
+    {
+        Process.Start("steam://run/20920");
+    }
+
+    private bool LaunchProcess(string program, string arguments)
+        {
+            try
+            {
+                using (Process proc = new Process())
+                {
+                    proc.StartInfo.FileName = program;
+                    proc.StartInfo.UseShellExecute = false;
+                    proc.StartInfo.RedirectStandardOutput = true;
+                    proc.StartInfo.RedirectStandardError = true;
+                    proc.StartInfo.CreateNoWindow = true;
+                    proc.StartInfo.Arguments = arguments;
+                    proc.Start();
+                    proc.WaitForExit();
+
+                    string stdout = proc.StandardOutput.ReadToEnd();
+                    string stderr = proc.StandardError.ReadToEnd();
+
+                    if (stderr.StartsWith("ERROR"))
+                    {
+                        MessageBox.Show(stderr, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return false;
+                    }
+
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void FileSystemWatcher_Changed(object sender, FileSystemEventArgs e)
+        {
+            buttonRestore.Enabled = File.Exists("backup.reg");
         }
     }
 }
