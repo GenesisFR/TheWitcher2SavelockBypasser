@@ -91,4 +91,7 @@
     <Content Include="witcher2.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>powershell -Command Compress-Archive -Path $(TargetDir)$(TargetFileName), "$(SolutionDir)README.md" -Update -DestinationPath $(TargetDir)$(TargetName).zip</PostBuildEvent>
+  </PropertyGroup>
 </Project>
