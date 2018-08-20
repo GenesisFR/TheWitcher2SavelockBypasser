@@ -15,7 +15,7 @@ A small tool that allows you to load saved games from The Witcher 2 after dying 
 - **Play**: runs the game through Steam.
 
 ## Known limitations
-It only supports up to 5 insane playthroughs. Either hit the Reset button before starting your 6th playthrough or see the [workaround](#workaround) section below.
+It only supports up to 5 insane playthroughs. Either hit the Reset button before starting your 6th playthrough or see the [Workaround](#workaround) section below.
 
-## <a name="workarounds">Workaround</a>
+## <a name="workaround">Workaround</a>
 You can use this [mod](https://www.nexusmods.com/witcher2/mods/794) to bypass permadeath entirely. You have to use it before dying though, as I think it prevents the game from writing to registry when you die.
