@@ -8,6 +8,7 @@ A small tool that allows you to load saved games from The Witcher 2 after dying 
 - [Visual Studio 2017](https://visualstudio.microsoft.com/vs/) (developers only)
 
 ## Usage
+- **Open in Regedit**: opens the game's key in the Registry Editor.
 - **Reset**: deletes all saved game information from registry.
 - **Backup**: creates a "backup.reg" file with your saved game information.
 - **Unlock**: unlocks all insane playthroughs.
@@ -18,4 +19,4 @@ A small tool that allows you to load saved games from The Witcher 2 after dying 
 It only supports up to 5 insane playthroughs. Either hit the Reset button before starting your 6th playthrough or see the [Workaround](#workaround) section below.
 
 ## <a name="workaround">Workaround</a>
-You can use this [mod](https://www.nexusmods.com/witcher2/mods/794) to bypass permadeath entirely. You have to use it before dying though, as I think it prevents the game from writing to registry when you die.
+You can use this [mod](https://www.nexusmods.com/witcher2/mods/794) to bypass permadeath entirely. You have to use it before dying though.
