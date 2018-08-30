@@ -165,7 +165,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.Name = "TheWitcher2SavelockBypasserForm";
-            this.Text = "The Witcher 2 Savelock Bypasser v1.0";
+            this.Text = "The Witcher 2 Savelock Bypasser v1.1";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.TheWitcher2SavelockBypasserForm_FormClosed);
             this.Shown += new System.EventHandler(this.TheWitcher2SavelockBypasserForm_Shown);
             ((System.ComponentModel.ISupportInitialize)(this.fileSystemWatcher)).EndInit();
