@@ -11,6 +11,7 @@ namespace TheWitcher2SavelockBypasser
     public partial class TheWitcher2SavelockBypasserForm : Form
     {
         private RegistryChangeMonitor regMonitor; // tracks changes made to the registry key below
+        private const string REG_LAST_KEY_NAME = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Applets\Regedit";
         private const string KEY_NAME = @"HKEY_CURRENT_USER\Software\CD Projekt RED\The Witcher 2";
         private const string VALUE_NAME = @"GameData";
         private const string FORMATTED_KEY_NAME = @"HKCU\Software\CD Projekt RED\The Witcher 2\GameData";
@@ -35,16 +36,18 @@ namespace TheWitcher2SavelockBypasser
             QueryRegistry();
         }
 
-        private void TheWitcher2SavelockBypasserForm_Load(object sender, EventArgs e)
+        private void TheWitcher2SavelockBypasserForm_Shown(object sender, EventArgs e)
         {
             RefreshUI();
+
+            textBoxRegistryKey.Text = KEY_NAME;
             fileSystemWatcher.Path = Directory.GetCurrentDirectory();
             buttonRestore.Enabled = File.Exists("backup.reg");
 
             if (value == null)
             {
                 string msg = string.Format("{0}\n\n{1}\n\n{2}", "The following registry entry doesn't exist:", FORMATTED_KEY_NAME,
-                    "Make sure you started a new insane playthrough.");
+                    "Make sure you started a new playthrough.");
 
                 MessageBox.Show(msg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -92,36 +95,35 @@ namespace TheWitcher2SavelockBypasser
 
                 if (value != null)
                 {
-                    // When playing on insane, the game will read/write a specific entry in registry, which value is an array of bytes, so
-                    // we need to convert it.
+                    // When starting a new playthrough, the game will read/write a specific entry in registry, which value is an array of
+                    // bytes, so we need to convert it.
                     bytes = (byte[])value;
 
-                    // This array of bytes has a specific length, based on the number of insane playthroughs started. It starts at 25
-                    // bytes and is incremented by 5 for each new insane playthrough.
+                    // This array of bytes has a specific length, based on the number of playthroughs started. It starts at 25 bytes and
+                    // is incremented by 5 for each new playthrough.
                     hasOnePlaythrough         = bytes.Length >= 25;
                     hasTwoPlaythroughs        = bytes.Length >= 30;
                     hasThreePlaythroughs      = bytes.Length >= 35;
                     hasFourPlaythroughs       = bytes.Length >= 40;
                     hasFiveOrMorePlaythroughs = bytes.Length >= 45;
 
-                    // When you die, a specific byte (based on how many insane playthroughs you've started) is shifted by one, effectively
-                    // locking the save for the current playthrough. It's also locked if the byte is anything other than what it's supposed
-                    // to be or if the registry entry doesn't exist.
-                    // This byte is different depending on the number of playthroughs, that's why I'm only supporting up to 5 playthroughs.
+                    // When you die while playing on insane, a specific byte is shifted by one, effectively locking saves from the current
+                    // playthrough. They're also locked if the byte has any other value or the registry entry doesn't exist.
+                    // The byte is different depending on the number of playthroughs, that's why I'm only supporting up to 5 playthroughs.
 
-                    // If the 9th byte is 53 (35 in hexa), the save is unlocked
+                    // If the 9th byte is 53 (35 in hexa), saves for the first playthrough are unlocked
                     if (hasOnePlaythrough)
                         isUnlocked = bytes[8] == 53;
-                    // If the 14th byte is 112 (70 in hexa), the save is unlocked
+                    // If the 14th byte is 112 (70 in hexa), saves for the second playthrough are unlocked
                     if (hasTwoPlaythroughs)
                         isUnlocked = bytes[13] == 112;
-                    // If the 19th byte is 119 (77 in hexa), the save is unlocked
+                    // If the 19th byte is 119 (77 in hexa), saves for the third playthrough are unlocked
                     if (hasThreePlaythroughs)
                         isUnlocked = bytes[18] == 119;
-                    // If the 24th byte is 4, the save is unlocked
+                    // If the 24th byte is 4, saves for the fourth playthrough are unlocked
                     if (hasFourPlaythroughs)
                         isUnlocked = bytes[23] == 4;
-                    // If the 29th byte is 17 (11 in hexa), the save is unlocked
+                    // If the 29th byte is 17 (11 in hexa), saves for the fifth playthrough are unlocked
                     if (hasFiveOrMorePlaythroughs)
                         isUnlocked = bytes[28] == 17;
                 }
@@ -142,9 +144,23 @@ namespace TheWitcher2SavelockBypasser
                 labelLocked.ForeColor = isUnlocked ? Color.Green : Color.Red;
                 labelLocked.Text = isUnlocked ? "UNLOCKED" : "LOCKED";
 
-                buttonReset.Enabled = value != null;
-                buttonBackup.Enabled = value != null;
-                buttonUnlock.Enabled = value != null;
+                buttonOpenInRegedit.Enabled = value != null;
+                buttonReset.Enabled         = value != null;
+                buttonBackup.Enabled        = value != null;
+                buttonUnlock.Enabled        = value != null;
+            }
+        }
+
+        private void ButtonOpenInRegedit_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Registry.SetValue(REG_LAST_KEY_NAME, "LastKey", KEY_NAME);
+                Process.Start("regedit.exe");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
