@@ -45,7 +45,7 @@
             // buttonUnlock
             // 
             this.buttonUnlock.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
-            this.buttonUnlock.Location = new System.Drawing.Point(248, 121);
+            this.buttonUnlock.Location = new System.Drawing.Point(248, 120);
             this.buttonUnlock.Name = "buttonUnlock";
             this.buttonUnlock.Size = new System.Drawing.Size(112, 34);
             this.buttonUnlock.TabIndex = 7;

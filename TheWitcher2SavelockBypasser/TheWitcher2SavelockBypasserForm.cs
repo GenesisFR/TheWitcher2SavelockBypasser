@@ -91,12 +91,8 @@ namespace TheWitcher2SavelockBypasser
 
         private void QueryRegistry()
         {
+            hasOnePlaythrough = hasTwoPlaythroughs = hasThreePlaythroughs = hasFourPlaythroughs = hasFiveOrMorePlaythroughs = false;
             isUnlocked = false;
-            hasOnePlaythrough = false;
-            hasTwoPlaythroughs = false;
-            hasThreePlaythroughs = false;
-            hasFourPlaythroughs = false;
-            hasFiveOrMorePlaythroughs = false;
 
             try
             {
@@ -111,11 +107,12 @@ namespace TheWitcher2SavelockBypasser
 
                     // This array of bytes has a specific length, based on the number of playthroughs started. It starts at 25 bytes and
                     // is incremented by 5 for each new playthrough.
-                    hasOnePlaythrough = bytes.Length >= 25;
-                    hasTwoPlaythroughs = bytes.Length >= 30;
-                    hasThreePlaythroughs = bytes.Length >= 35;
-                    hasFourPlaythroughs = bytes.Length >= 40;
-                    hasFiveOrMorePlaythroughs = bytes.Length >= 45;
+                    int bytesLength = bytes.Length;
+                    hasOnePlaythrough = bytesLength >= 25;
+                    hasTwoPlaythroughs = bytesLength >= 30;
+                    hasThreePlaythroughs = bytesLength >= 35;
+                    hasFourPlaythroughs = bytesLength >= 40;
+                    hasFiveOrMorePlaythroughs = bytesLength >= 45;
 
                     // When you die while playing on insane, a specific byte is shifted by one, effectively locking saves from the current
                     // playthrough. They're also locked if the byte has any other value or the registry entry doesn't exist.
@@ -228,7 +225,7 @@ namespace TheWitcher2SavelockBypasser
                 // Make sure we're not changing old values
                 QueryRegistry();
 
-                if (value != null && bytes != null && bytes.Length > 8)
+                if (value != null)
                 {
                     // Magic numbers (yer a wizard, Harry)
                     if (hasOnePlaythrough)
