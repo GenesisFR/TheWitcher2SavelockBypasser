@@ -23,6 +23,7 @@ namespace TheWitcher2SavelockBypasser
         private bool hasFourPlaythroughs;
         private bool hasFiveOrMorePlaythroughs;
         private bool isUnlocked;
+        private bool showWarning = false;
 
         private delegate void refreshDelegate();
         private refreshDelegate refreshUIDelegate;
@@ -33,12 +34,11 @@ namespace TheWitcher2SavelockBypasser
             StartMonitoringRegistry();
 
             refreshUIDelegate = new refreshDelegate(RefreshUI);
-            QueryRegistry();
         }
 
         private void TheWitcher2SavelockBypasserForm_Shown(object sender, EventArgs e)
         {
-            RefreshUI();
+            OnRegistryChanged(null, null);
 
             textBoxRegistryKey.Text = KEY_NAME;
             fileSystemWatcher.Path = Directory.GetCurrentDirectory();
@@ -79,6 +79,14 @@ namespace TheWitcher2SavelockBypasser
         {
             QueryRegistry();
             RefreshUI();
+
+            if (!showWarning && bytes?.Length > 45)
+            {
+                showWarning = true;
+                MessageBox.Show("We detected you started more than 5 playthroughs. This tool can only unlock your first 5 " +
+                    "playthroughs. Therefore, the locked status shown may be incorrect. Check the readme for more details.",
+                    "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         private void QueryRegistry()
@@ -179,7 +187,11 @@ namespace TheWitcher2SavelockBypasser
                     buttonBackup.PerformClick();
 
                 if (LaunchProcess("reg.exe", string.Format("delete \"{0}\" /v \"{1}\" /f", KEY_NAME, VALUE_NAME)))
+                {
+                    showWarning = false;
+                    Array.Resize(ref bytes, 0);
                     MessageBox.Show("Reset successful.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
         }
 
