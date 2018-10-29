@@ -48,7 +48,6 @@ namespace TheWitcher2SavelockBypasser
             {
                 string msg = string.Format("{0}\n\n{1}\n\n{2}", "The following registry entry doesn't exist:", FORMATTED_KEY_NAME,
                     "Make sure you started a new playthrough.");
-
                 MessageBox.Show(msg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -60,8 +59,11 @@ namespace TheWitcher2SavelockBypasser
 
         private void StartMonitoringRegistry()
         {
-            regMonitor = new RegistryChangeMonitor(KEY_NAME, RegistryChangeMonitor.REG_NOTIFY_CHANGE.LAST_SET);
-            regMonitor.Changed += OnRegistryChanged;
+            if (regMonitor == null)
+            {
+                regMonitor = new RegistryChangeMonitor(KEY_NAME, RegistryChangeMonitor.REG_NOTIFY_CHANGE.LAST_SET);
+                regMonitor.Changed += OnRegistryChanged;
+            }
 
             // Start listening for events
             regMonitor.Start();
@@ -101,10 +103,10 @@ namespace TheWitcher2SavelockBypasser
 
                     // This array of bytes has a specific length, based on the number of playthroughs started. It starts at 25 bytes and
                     // is incremented by 5 for each new playthrough.
-                    hasOnePlaythrough         = bytes.Length >= 25;
-                    hasTwoPlaythroughs        = bytes.Length >= 30;
-                    hasThreePlaythroughs      = bytes.Length >= 35;
-                    hasFourPlaythroughs       = bytes.Length >= 40;
+                    hasOnePlaythrough = bytes.Length >= 25;
+                    hasTwoPlaythroughs = bytes.Length >= 30;
+                    hasThreePlaythroughs = bytes.Length >= 35;
+                    hasFourPlaythroughs = bytes.Length >= 40;
                     hasFiveOrMorePlaythroughs = bytes.Length >= 45;
 
                     // When you die while playing on insane, a specific byte is shifted by one, effectively locking saves from the current
@@ -144,10 +146,11 @@ namespace TheWitcher2SavelockBypasser
                 labelLocked.ForeColor = isUnlocked ? Color.Green : Color.Red;
                 labelLocked.Text = isUnlocked ? "UNLOCKED" : "LOCKED";
 
+                // Update buttons status
                 buttonOpenInRegedit.Enabled = value != null;
-                buttonReset.Enabled         = value != null;
-                buttonBackup.Enabled        = value != null;
-                buttonUnlock.Enabled        = value != null;
+                buttonReset.Enabled = value != null;
+                buttonBackup.Enabled = value != null;
+                buttonUnlock.Enabled = value != null;
             }
         }
 
@@ -170,11 +173,11 @@ namespace TheWitcher2SavelockBypasser
                 " able to load any save made on insane difficulty. Would you like to back it up first?", "Warning",
                 MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
 
-            if (result == DialogResult.Yes)
-                buttonBackup.PerformClick();
-
             if (result != DialogResult.Cancel)
             {
+                if (result == DialogResult.Yes)
+                    buttonBackup.PerformClick();
+
                 if (LaunchProcess("reg.exe", string.Format("delete \"{0}\" /v \"{1}\" /f", KEY_NAME, VALUE_NAME)))
                     MessageBox.Show("Reset successful.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -229,10 +232,8 @@ namespace TheWitcher2SavelockBypasser
 
                     // Update registry
                     Registry.SetValue(KEY_NAME, VALUE_NAME, bytes, RegistryValueKind.None);
-                }
-
-                if (value != null)
                     MessageBox.Show("Save unlocked successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
             catch
             {
@@ -267,7 +268,6 @@ namespace TheWitcher2SavelockBypasser
                     proc.Start();
                     proc.WaitForExit();
 
-                    string stdout = proc.StandardOutput.ReadToEnd();
                     string stderr = proc.StandardError.ReadToEnd();
 
                     if (stderr.StartsWith("ERROR"))
@@ -275,14 +275,14 @@ namespace TheWitcher2SavelockBypasser
                         MessageBox.Show(stderr, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return false;
                     }
-
-                    return true;
                 }
             }
             catch
             {
                 return false;
             }
+
+            return true;
         }
 
         private void FileSystemWatcher_Changed(object sender, FileSystemEventArgs e)
