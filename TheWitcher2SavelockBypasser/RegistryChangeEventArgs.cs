@@ -8,21 +8,17 @@ namespace TheWitcher2SavelockBypasser
         #region Fields
         private bool _stop;
         private Exception _exception;
-        private RegistryChangeMonitor _monitor;
         #endregion
 
         #region Constructor
         public RegistryChangeEventArgs(RegistryChangeMonitor monitor)
         {
-            this._monitor = monitor;
+            this.Monitor = monitor;
         }
         #endregion
 
         #region Properties
-        public RegistryChangeMonitor Monitor
-        {
-            get { return this._monitor; }
-        }
+        public RegistryChangeMonitor Monitor { get; }
 
         public Exception Exception
         {

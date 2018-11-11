@@ -11,10 +11,13 @@ namespace TheWitcher2SavelockBypasser
     public partial class TheWitcher2SavelockBypasserForm : Form
     {
         private RegistryChangeMonitor regMonitor; // tracks changes made to the registry key below
-        private const string REG_LAST_KEY_NAME = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Applets\Regedit";
-        private const string KEY_NAME = @"HKEY_CURRENT_USER\Software\CD Projekt RED\The Witcher 2";
-        private const string VALUE_NAME = @"GameData";
         private const string FORMATTED_KEY_NAME = @"HKCU\Software\CD Projekt RED\The Witcher 2\GameData";
+        private const string KEY_NAME = @"HKEY_CURRENT_USER\Software\CD Projekt RED\The Witcher 2";
+        private const string REG_EXE = "reg.exe";
+        private const string REG_FILE_NAME = "backup.reg";
+        private const string REG_LAST_KEY_NAME = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Applets\Regedit";
+        private const string REG_TEMP_FILE_NAME = "backup_temp.reg";
+        private const string VALUE_NAME = @"GameData";
         private object value;
         private byte[] bytes;
         private bool hasOnePlaythrough;
@@ -38,11 +41,11 @@ namespace TheWitcher2SavelockBypasser
 
         private void TheWitcher2SavelockBypasserForm_Shown(object sender, EventArgs e)
         {
-            OnRegistryChanged(null, null);
-
             textBoxRegistryKey.Text = KEY_NAME;
             fileSystemWatcher.Path = Directory.GetCurrentDirectory();
-            buttonRestore.Enabled = File.Exists("backup.reg");
+            buttonRestore.Enabled = File.Exists(REG_FILE_NAME);
+
+            OnRegistryChanged();
 
             if (value == null)
             {
@@ -54,6 +57,7 @@ namespace TheWitcher2SavelockBypasser
 
         private void TheWitcher2SavelockBypasserForm_FormClosed(object sender, FormClosedEventArgs e)
         {
+            // Clean up resources
             StopMonitoringRegistry();
         }
 
@@ -72,15 +76,17 @@ namespace TheWitcher2SavelockBypasser
         private void StopMonitoringRegistry()
         {
             // Stop listening for events
-            regMonitor.Dispose();
+            regMonitor?.Dispose();
         }
 
-        private void OnRegistryChanged(object sender, RegistryChangeEventArgs e)
+        private void OnRegistryChanged(object sender = null, RegistryChangeEventArgs e = null)
         {
             QueryRegistry();
             RefreshUI();
 
-            if (!showWarning && bytes?.Length > 45)
+            bool hasMoreThanFivePlaythroughs = bytes?.Length > 45;
+
+            if (!showWarning && hasMoreThanFivePlaythroughs)
             {
                 showWarning = true;
                 MessageBox.Show("We detected you started more than 5 playthroughs. This tool can only unlock your first 5 " +
@@ -183,7 +189,7 @@ namespace TheWitcher2SavelockBypasser
                 if (result == DialogResult.Yes)
                     buttonBackup.PerformClick();
 
-                if (LaunchProcess("reg.exe", string.Format("delete \"{0}\" /v \"{1}\" /f", KEY_NAME, VALUE_NAME)))
+                if (LaunchProcess(REG_EXE, string.Format("delete \"{0}\" /v \"{1}\" /f", KEY_NAME, VALUE_NAME)))
                 {
                     showWarning = false;
                     Array.Resize(ref bytes, 0);
@@ -197,17 +203,19 @@ namespace TheWitcher2SavelockBypasser
             try
             {
                 // Make a temporary REG file
-                if (value != null && LaunchProcess("reg.exe", string.Format("export \"{0}\" \"{1}\" /y", KEY_NAME, "backup_temp.reg")) &&
-                    File.Exists("backup_temp.reg"))
+                bool isTempBackupSuccessful = LaunchProcess(REG_EXE, string.Format("export \"{0}\" \"{1}\" /y", KEY_NAME,
+                    REG_TEMP_FILE_NAME));
+
+                if (value != null && isTempBackupSuccessful && File.Exists(REG_TEMP_FILE_NAME))
                 {
                     // Remove unnecessary lines
-                    List<string> lines = new List<string>(File.ReadLines("backup_temp.reg"));
+                    List<string> lines = new List<string>(File.ReadLines(REG_TEMP_FILE_NAME));
                     lines.RemoveAll(item => item.Contains("Language") || item.Contains("Speech") || item.Contains("InstallStatus") ||
                         item.Contains(@"[HKEY_CURRENT_USER\Software\CD Projekt RED\The Witcher 2\Downloads]"));
 
                     // Create the final REG file
-                    File.WriteAllLines("backup.reg", lines);
-                    File.Delete("backup_temp.reg");
+                    File.WriteAllLines(REG_FILE_NAME, lines);
+                    File.Delete(REG_TEMP_FILE_NAME);
 
                     MessageBox.Show("Backup successful.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -253,7 +261,7 @@ namespace TheWitcher2SavelockBypasser
 
     private void ButtonRestore_Click(object sender, EventArgs e)
     {
-        if (LaunchProcess("reg.exe", "import backup.reg"))
+        if (LaunchProcess(REG_EXE, $"import {REG_FILE_NAME}"))
             MessageBox.Show("Restoration successful.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
@@ -296,7 +304,7 @@ namespace TheWitcher2SavelockBypasser
 
         private void FileSystemWatcher_Changed(object sender, FileSystemEventArgs e)
         {
-            buttonRestore.Enabled = File.Exists("backup.reg");
+            buttonRestore.Enabled = File.Exists(REG_FILE_NAME);
         }
     }
 }
