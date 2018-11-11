@@ -285,11 +285,10 @@ namespace TheWitcher2SavelockBypasser
                     proc.Start();
                     proc.WaitForExit();
 
-                    string stderr = proc.StandardError.ReadToEnd();
-
-                    if (stderr.StartsWith("ERROR"))
+                    // Return code is 0 for success or 1 for failure
+                    if (proc.ExitCode == 1)
                     {
-                        MessageBox.Show(stderr, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(proc.StandardError.ReadToEnd(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return false;
                     }
                 }
